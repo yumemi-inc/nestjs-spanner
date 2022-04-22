@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Cloud Spanner for Nest.js",
   "author": "tfunato",
-  "private": true,
+  "private": false,
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
