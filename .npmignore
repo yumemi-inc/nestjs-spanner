@@ -1,3 +1,11 @@
+# source
+**/*.ts
+*.ts
+
+# definitions
+!**/*.d.ts
+!*.d.ts
+
 .github
 index.ts
 test
@@ -9,11 +17,4 @@ jest.config.js.ts
 yarn.lock
 package-lock.json
 lib
-
-# source
-**/*.ts
-*.ts
-
-# definitions
-!**/*.d.ts
-!*.d.ts
+tsconfig.tsbuildinfo
