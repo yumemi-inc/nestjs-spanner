@@ -1,1 +1,0 @@
-{"version":3,"file":"entity.js","sourceRoot":"","sources":["../../../lib/repository/decorator/entity.ts"],"names":[],"mappings":";;;AAAA,wCAAmD;AAKnD,SAAgB,MAAM,CAAC,IAAY;IACjC,OAAO,UAAU,MAAM;QACrB,IAAA,gCAAsB,GAAE,CAAC,MAAM,CAAC,IAAI,CAAC;YACnC,MAAM,EAAE,MAAM;YACd,IAAI,EAAE,IAAI;YACV,cAAc,EAAE,MAAM,CAAC,IAAI,GAAG,YAAY;SACtB,CAAC,CAAA;IACzB,CAAC,CAAA;AACH,CAAC;AARD,wBAQC"}

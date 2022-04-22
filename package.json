@@ -1,10 +1,10 @@
 {
   "name": "@nestjs/spanner",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Cloud Spanner for Nest.js",
+  "author": "tfunato",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.json",
@@ -13,6 +13,13 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:e2e:dev": "jest --config ./test/jest-e2e.json --runInBand --watch"
 
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:yumemi-inc/nestjs-spanner.git"
+  },
+  "engines": {
+    "node": ">= 16.0.0"
   },
   "peerDependencies": {
     "@google-cloud/spanner": "^5.18.0",

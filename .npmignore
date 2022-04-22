@@ -1,0 +1,19 @@
+.github
+index.ts
+test
+sample
+tsconfig.json
+jest.config.js.ts
+.eslintrc.js
+.prettierrc
+yarn.lock
+package-lock.json
+lib
+
+# source
+**/*.ts
+*.ts
+
+# definitions
+!**/*.d.ts
+!*.d.ts

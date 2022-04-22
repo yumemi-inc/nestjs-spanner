@@ -1,1 +1,0 @@
-{"version":3,"file":"spanner.module.js","sourceRoot":"","sources":["../../lib/service/spanner.module.ts"],"names":[],"mappings":";;;;;;;;;AAAA,2CAAuC;AACvC,uDAAkD;AAMlD,IAAa,aAAa,GAA1B,MAAa,aAAa;CAAG,CAAA;AAAhB,aAAa;IAJzB,IAAA,eAAM,EAAC;QACN,SAAS,EAAE,CAAC,gCAAc,CAAC;QAC3B,OAAO,EAAE,CAAC,gCAAc,CAAC;KAC1B,CAAC;GACW,aAAa,CAAG;AAAhB,sCAAa"}
