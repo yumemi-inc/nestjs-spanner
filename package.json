@@ -8,9 +8,9 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.json",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"lib/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint 'lib/**/*.ts' --fix",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "test": "jest --config ./test/jest-e2e.json --runInBand",
     "test:e2e:dev": "jest --config ./test/jest-e2e.json --runInBand --watch"
   },
   "repository": {
