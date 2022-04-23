@@ -1,6 +1,3 @@
-/**
- * A single property handler for FindOptionsOrder.
- */
 export type FindOptionsOrderProperty<Property> = Property extends Promise<
   infer I
 >
@@ -17,16 +14,10 @@ export type FindOptionsOrderProperty<Property> = Property extends Promise<
   ? FindOptionsOrder<Property>
   : FindOptionsOrderValue
 
-/**
- * Order by find options.
- */
 export type FindOptionsOrder<Entity> = {
   [P in keyof Entity]?: FindOptionsOrderProperty<NonNullable<Entity[P]>>
 }
 
-/**
- * Value of order by in find options.
- */
 export type FindOptionsOrderValue =
   | 'ASC'
   | 'DESC'

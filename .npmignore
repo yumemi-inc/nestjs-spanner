@@ -7,6 +7,7 @@
 !*.d.ts
 
 .github
+.idea
 index.ts
 test
 sample
@@ -18,3 +19,4 @@ yarn.lock
 package-lock.json
 lib
 tsconfig.tsbuildinfo
+.node-version
