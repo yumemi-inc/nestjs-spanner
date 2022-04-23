@@ -1,7 +1,7 @@
 {
-  "name": "@yumemi-inc/nestjs-spanner",
+  "name": "nestjs-spanner",
   "version": "0.0.1",
-  "description": "Cloud Spanner for Nest.js",
+  "description": "Cloud Spanner orm for Nest.js",
   "author": "tfunato",
   "private": false,
   "license": "MIT",
@@ -18,7 +18,7 @@
     "url": "git@github.com:yumemi-inc/nestjs-spanner.git"
   },
   "publishConfig": {
-    "registry":"https://npm.pkg.github.com/yumemi-inc"
+    "access": "public"
   },
   "engines": {
     "node": ">= 16.0.0"

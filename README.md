@@ -4,7 +4,9 @@
 
 ## Description
 
-Thin ORM for Spanner depend on [Nest](https://github.com/nestjs/nest) framework by TypeScript.
+This is a thin ORM for Cloud Spanner with [Nest](https://github.com/nestjs/nest)
+
+Includes experimental part.
 
 ## Installation
 
@@ -18,11 +20,6 @@ $ yarn
 # unit tests
 $ yarn test
 
-# e2e tests
-$ yarn test:e2e
-
-# test coverage
-$ yarn test:cov
 ```
 
 ## License
