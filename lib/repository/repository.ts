@@ -1,8 +1,7 @@
-import { SpannerService } from '../service/spanner.service'
-import { FindOneOptions } from './find-option/find-one-option'
+import { SpannerService } from '../service'
+import { FindOneOptions } from './find-option'
 import { getMetadataArgsStorage } from './globals'
-import { ColumnMetaDataArgs } from './meta-data/column-meta-data-args'
-import { TableMetaDataArgs } from './meta-data/table-meta-data-args'
+import { ColumnMetaDataArgs, TableMetaDataArgs } from './meta-data'
 import { Row } from '@google-cloud/spanner/build/src/partial-result-stream'
 import { Logger } from '@nestjs/common'
 import { Database } from '@google-cloud/spanner/build/src/database'
@@ -53,7 +52,7 @@ export class Repository<T> {
     }
     query = query.concat(' ) VALUES (@')
     query = query.concat(filteredColumns.join(', @'))
-    nullColumns.forEach((colum) => {
+    nullColumns.forEach((_) => {
       query = query.concat(', NULL')
     })
     query = query.concat(')')
@@ -76,6 +75,7 @@ export class Repository<T> {
     }
     return entity
   }
+
   async findAll(): Promise<T[]> {
     const columnNames = this.getColumnNames()
     const query = this.baseSelectQuery(columnNames, this.getMetaData())
@@ -93,13 +93,15 @@ export class Repository<T> {
   }
 
   async findOne(options: FindOneOptions<T>): Promise<T | null> {
+    const meta: Meta = this.getMetaData()
     const columnNames = this.getColumnNames()
     const params = {}
     let sql = this.baseSelectQuery(columnNames, this.getMetaData())
     sql = sql.concat(' WHERE ')
-    const wheres: string[] = Object.keys(options.where).map((key: string) => {
+    const pkColumns = this.getPkColumns(meta, options)
+    const wheres: string[] = pkColumns.map((key: string) => {
       params[key] = options.where[key]
-      return key + '=@' + key + ' '
+      return key + '=@' + key
     })
     sql = sql.concat(wheres.join(' AND '))
     sql = sql.concat(' LIMIT 1')
@@ -126,29 +128,15 @@ export class Repository<T> {
   }
   async deleteByPK(options: FindOneOptions<T>): Promise<number> {
     const meta: Meta = this.getMetaData()
-    // check pk
-    const pkColumns = meta.metaColumns
-      .filter((metaColumn) => {
-        return metaColumn.primary == true
-      })
-      .map((column) => {
-        return column.propertyName
-      })
-    if (pkColumns.length == 0) {
-      throw new Error('pk column not found')
-    }
-    pkColumns.forEach((pkColumn) => {
-      if (!(pkColumn in options.where)) {
-        throw new Error('pk column must set')
-      }
-    })
+    const pkColumns = this.getPkColumns(meta, options)
+
     let sql = 'DELETE FROM '.concat(meta.metaTable.name).concat(' WHERE ')
     const params = {}
-    const wheres: string[] = Object.keys(options.where).map((key: string) => {
+    const wheres: string[] = pkColumns.map((key: string) => {
       params[key] = options.where[key]
       return key + '=@' + key + ' '
     })
-    sql = sql.concat(wheres.join(' AND '))
+    sql = sql.concat(pkColumns.join(' AND '))
 
     this.logger.log(sql)
     this.logger.log(JSON.stringify(params))
@@ -174,20 +162,21 @@ export class Repository<T> {
 
   async updateByPK(entity: T): Promise<number> {
     const meta: Meta = this.getMetaData()
-    // check pk
     const pkColumns = meta.metaColumns
-      .filter((metaColumn) => {
-        return metaColumn.primary == true
+      .filter((column: ColumnMetaDataArgs) => {
+        return column.primary === true
       })
-      .map((column) => {
+      .map((column: ColumnMetaDataArgs) => {
         return column.propertyName
       })
-    if (pkColumns.length == 0) {
-      throw new Error('pk column not found.set pk column in entity')
+    if (pkColumns.length === 0) {
+      throw new Error(
+        'no pk column. must set pk column at least one to entity.',
+      )
     }
-    pkColumns.forEach((pkColumn: string) => {
-      if (!entity[pkColumn]) {
-        throw new Error('pk column value must set.')
+    pkColumns.forEach((column: string) => {
+      if (!entity[column]) {
+        throw new Error('must set pk value at ' + column)
       }
     })
     let sql = 'UPDATE '.concat(meta.metaTable.name).concat(' SET ')
@@ -257,5 +246,25 @@ export class Repository<T> {
     query = query.concat(columnNames.join(', '))
     query = query.concat(' FROM ').concat(meta.metaTable.name)
     return query
+  }
+
+  protected getPkColumns(meta: Meta, options: FindOneOptions<T>): string[] {
+    // check pk
+    const pkColumns = meta.metaColumns
+      .filter((metaColumn) => {
+        return metaColumn.primary == true
+      })
+      .map((column) => {
+        return column.propertyName
+      })
+    if (pkColumns.length == 0) {
+      throw new Error('pk column not found.set pk column in entity')
+    }
+    pkColumns.forEach((pkColumn) => {
+      if (!(pkColumn in options.where)) {
+        throw new Error('pk column value must set.')
+      }
+    })
+    return pkColumns
   }
 }
