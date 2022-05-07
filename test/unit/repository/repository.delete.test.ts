@@ -1,13 +1,13 @@
-import { TransactionManager } from '../../../lib'
 import { CompositeKeyTestRepository } from '../../src/CompositeKeyTestRepository'
 import { CompositeKeyTest } from '../../src/entity/CompositeKeyTest'
+import { TransactionManager } from '../../../lib'
 
 jest.mock('../../../lib/service/transaction-manager')
 
 const TransactionManagerMock = TransactionManager as jest.Mock
 
-describe('repository insert test', () => {
-  test('insert composite key test', async () => {
+describe('repository delete test', () => {
+  test('delete composite key test', async () => {
     TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
@@ -19,13 +19,11 @@ describe('repository insert test', () => {
                   params: any
                 }): Promise<[number]> => {
                   expect(param.sql).toBe(
-                    'INSERT CompositeKeyTests (id, idSub, a, b ) VALUES (@id, @idSub, @a, @b)',
+                    'DELETE FROM CompositeKeyTests WHERE id=@id AND idSub=@idSub',
                   )
                   expect(param.params).toEqual({
                     id: 123,
-                    idSub: 'foo',
-                    a: 'abcd',
-                    b: 'efg',
+                    idSub: 'abc',
                   })
                   return Promise.resolve([1])
                 },
@@ -42,13 +40,26 @@ describe('repository insert test', () => {
       CompositeKeyTest,
     )
 
-    let entity = new CompositeKeyTest()
-    entity.id = 123
-    entity.idSub = 'foo'
-    entity.a = 'abcd'
-    entity.b = 'efg'
+    let actual: number = await target.deleteByPK({
+      where: {
+        id: 123,
+        idSub: 'abc',
+      },
+    })
+    expect(actual).toBe(1)
 
-    let actual: CompositeKeyTest = await target.insert(entity)
-    expect(actual).toEqual(entity)
+    // pk columns check error test
+    transactionManager = new TransactionManager(null)
+    target = new CompositeKeyTestRepository(
+      transactionManager,
+      CompositeKeyTest,
+    )
+    await expect(
+      target.deleteByPK({
+        where: {
+          id: 123,
+        },
+      }),
+    ).rejects.toThrow('pk column value must set.')
   })
 })
