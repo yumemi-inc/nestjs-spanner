@@ -14,20 +14,17 @@ export class TransactionManager {
     this.spanner = spanner
   }
 
-  async runTransactionAsync<T = {}>(
-    runFn: AsyncRunTransactionCallback<T>,
-  ): Promise<T> {
+  async runTransactionAsync<T = {}>(runFn: AsyncRunTransactionCallback<T>) {
     const db = this.spanner.getDb()
     await db.runTransactionAsync(async (transaction) => {
       try {
         await runFn(transaction)
+        await transaction.commit()
       } catch (err) {
         await transaction.rollback()
-      } finally {
-        await transaction.commit()
+        throw err
       }
     })
-    return null
   }
 
   getDb(): Database {

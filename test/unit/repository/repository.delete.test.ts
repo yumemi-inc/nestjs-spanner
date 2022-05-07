@@ -28,6 +28,7 @@ describe('repository delete test', () => {
                   return Promise.resolve([1])
                 },
                 commit: async (): Promise<void> => {},
+                rollback: async (): Promise<void> => {},
               })
             },
           }
