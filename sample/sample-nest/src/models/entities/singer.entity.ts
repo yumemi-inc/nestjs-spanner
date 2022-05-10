@@ -1,4 +1,4 @@
-import { Entity ,PrimaryColumn, Column } from 'nest-spanner'
+import { Entity ,PrimaryColumn, Column } from 'nestjs-spanner'
 
 @Entity('Singers')
 export class Singer {

@@ -4,6 +4,6 @@ import { TransactionManager } from './transaction-manager'
 
 @Module({
   providers: [SpannerService, TransactionManager],
-  exports: [TransactionManager],
+  exports: [SpannerService, TransactionManager],
 })
 export class SpannerModule {}
