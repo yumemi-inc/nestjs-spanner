@@ -1,14 +1,14 @@
-import { SpannerService } from '../../../lib'
+import { TransactionManager } from '../../../lib'
 import { CompositeKeyTestRepository } from '../../src/CompositeKeyTestRepository'
 import { CompositeKeyTest } from '../../src/entity/CompositeKeyTest'
 
-jest.mock('../../../lib/service/spanner.service')
+jest.mock('../../../lib/service/transaction-manager')
 
-const SpannerServiceMock = SpannerService as jest.Mock
+const TransactionManagerMock = TransactionManager as jest.Mock
 
 describe('repository composite key test', () => {
   test('findOne composite key test', async () => {
-    SpannerServiceMock.mockImplementationOnce(() => {
+    TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
           return {
@@ -41,9 +41,9 @@ describe('repository composite key test', () => {
       }
     })
 
-    let spannerService = new SpannerService()
+    let transactionManager = new TransactionManager(null)
     let target = new CompositeKeyTestRepository(
-      spannerService,
+      transactionManager,
       CompositeKeyTest,
     )
     let actual: CompositeKeyTest | null = await target.findOne({
@@ -59,8 +59,11 @@ describe('repository composite key test', () => {
     expect(actual).toEqual(expectResult)
 
     // pk columns check error test
-    spannerService = new SpannerService()
-    target = new CompositeKeyTestRepository(spannerService, CompositeKeyTest)
+    transactionManager = new TransactionManager(null)
+    target = new CompositeKeyTestRepository(
+      transactionManager,
+      CompositeKeyTest,
+    )
     await expect(target.findOne({ where: { id: 123 } })).rejects.toThrow(
       'pk column value must set.',
     )

@@ -1,5 +1,5 @@
-import { Repository } from 'nest-spanner'
-import { Singer } from './entities/singer.entity'
+import { Repository } from 'nestjs-spanner'
+import { Singer } from '../entities/singer.entity'
 import { Injectable } from '@nestjs/common'
 
 @Injectable()

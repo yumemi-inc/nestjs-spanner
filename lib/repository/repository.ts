@@ -6,6 +6,8 @@ import { Row } from '@google-cloud/spanner/build/src/partial-result-stream'
 import { Logger } from '@nestjs/common'
 import { Database } from '@google-cloud/spanner/build/src/database'
 import { Json } from '@google-cloud/spanner/build/src/codec'
+import { TransactionManager } from '../service/transaction-manager'
+import { Transaction } from '@google-cloud/spanner'
 
 type Meta = {
   metaTable: TableMetaDataArgs
@@ -13,16 +15,19 @@ type Meta = {
 }
 
 export class Repository<T> {
-  readonly spanner: SpannerService
+  readonly transactionManager: TransactionManager
   private readonly logger = new Logger(Repository.name)
   private readonly target
 
-  constructor(spanner: SpannerService, ctor: { new (): T }) {
-    this.spanner = spanner
+  constructor(transactionManager: TransactionManager, ctor: { new (): T }) {
+    this.transactionManager = transactionManager
     this.target = new ctor()
   }
 
-  async insert(entity: T): Promise<T> {
+  async insert(entity: T): Promise<T>
+  async insert(entity: T, transaction: Transaction): Promise<T>
+
+  async insert(entity: T, transaction?: Transaction): Promise<T> {
     const meta = this.getMetaData()
     let query = 'INSERT '
     query = query.concat(meta.metaTable.name)
@@ -60,18 +65,27 @@ export class Repository<T> {
     this.logger.log(query)
     this.logger.log(JSON.stringify(params))
 
-    const database: Database = this.spanner.getDb()
-    try {
-      await database.runTransactionAsync(async (transaction) => {
-        const [rowCount] = await transaction.runUpdate({
-          sql: query,
-          params: params,
-        })
-        this.logger.log('insert row count:' + rowCount.toString())
-        await transaction.commit()
+    if (transaction) {
+      const [rowCount] = await transaction.runUpdate({
+        sql: query,
+        params: params,
       })
-    } catch (err) {
-      throw err
+      this.logger.log('insert row count:' + rowCount.toString())
+    } else {
+      const database: Database = this.transactionManager.getDb()
+      await database.runTransactionAsync(async (tx) => {
+        try {
+          const [rowCount] = await tx.runUpdate({
+            sql: query,
+            params: params,
+          })
+          this.logger.log('insert row count:' + rowCount.toString())
+          await tx.commit()
+        } catch (err) {
+          await tx.rollback()
+          throw err
+        }
+      })
     }
     return entity
   }
@@ -83,7 +97,7 @@ export class Repository<T> {
     this.logger.log(query)
 
     try {
-      const [rows] = await this.spanner.getDb().run(query)
+      const [rows] = await this.transactionManager.getDb().run(query)
       return rows.map<T>((row: Row | Json) => {
         return this.mapEntity(row.toJSON(), columnNames)
       })
@@ -109,7 +123,7 @@ export class Repository<T> {
     this.logger.log(JSON.stringify(params))
 
     try {
-      const [rows] = await this.spanner.getDb().run({
+      const [rows] = await this.transactionManager.getDb().run({
         json: false,
         sql: sql,
         params: params,
@@ -126,7 +140,17 @@ export class Repository<T> {
       throw err
     }
   }
-  async deleteByPK(options: FindOneOptions<T>): Promise<number> {
+
+  async deleteByPK(options: FindOneOptions<T>): Promise<number>
+  async deleteByPK(
+    options: FindOneOptions<T>,
+    transaction: Transaction,
+  ): Promise<number>
+
+  async deleteByPK(
+    options: FindOneOptions<T>,
+    transaction?: Transaction,
+  ): Promise<number> {
     const meta: Meta = this.getMetaData()
     const pkColumns = this.getPkColumns(meta, options)
 
@@ -134,33 +158,44 @@ export class Repository<T> {
     const params = {}
     const wheres: string[] = pkColumns.map((key: string) => {
       params[key] = options.where[key]
-      return key + '=@' + key + ' '
+      return key + '=@' + key
     })
-    sql = sql.concat(pkColumns.join(' AND '))
+    sql = sql.concat(wheres.join(' AND '))
 
     this.logger.log(sql)
     this.logger.log(JSON.stringify(params))
 
     let count = 0
-    const db = await this.spanner.getDb()
-    try {
-      await db.runTransactionAsync(async (transaction) => {
-        const [rowCount] = await transaction.runUpdate({
-          sql: sql,
-          params: params,
-        })
-        this.logger.log(sql)
-        this.logger.log('delete row count:' + rowCount)
-        await transaction.commit()
-        count = rowCount
+    if (transaction) {
+      const [rowCount] = await transaction.runUpdate({
+        sql: sql,
+        params: params,
       })
-    } catch (err) {
-      throw err
+      count = rowCount
+    } else {
+      const db = await this.transactionManager.getDb()
+      await db.runTransactionAsync(async (tx: Transaction) => {
+        try {
+          const [rowCount] = await tx.runUpdate({
+            sql: sql,
+            params: params,
+          })
+          await tx.commit()
+          count = rowCount
+        } catch (err) {
+          await tx.rollback()
+          throw err
+        }
+      })
     }
+    this.logger.log('delete row count:' + count)
     return count
   }
 
-  async updateByPK(entity: T): Promise<number> {
+  async updateByPK(entity: T): Promise<number>
+  async updateByPK(entity: T, transaction: Transaction): Promise<number>
+
+  async updateByPK(entity: T, transaction?: Transaction): Promise<number> {
     const meta: Meta = this.getMetaData()
     const pkColumns = meta.metaColumns
       .filter((column: ColumnMetaDataArgs) => {
@@ -196,23 +231,34 @@ export class Repository<T> {
     })
     sql = sql.concat(setters.join(' , '))
     sql = sql.concat(' WHERE ').concat(wheres.join(' AND '))
-    const db = await this.spanner.getDb()
+
+    this.logger.log(sql)
+    this.logger.log(JSON.stringify(params))
+
     let count = 0
-    try {
-      await db.runTransactionAsync(async (transaction) => {
-        const [rowCount] = await transaction.runUpdate({
-          sql: sql,
-          params: params,
-        })
-        this.logger.log(sql)
-        this.logger.log(JSON.stringify(params))
-        this.logger.log('update row count:' + rowCount)
-        await transaction.commit()
-        count = rowCount
+    if (transaction) {
+      const [rowCount] = await transaction.runUpdate({
+        sql: sql,
+        params: params,
       })
-    } catch (err) {
-      throw err
+      count = rowCount
+    } else {
+      const db = await this.transactionManager.getDb()
+      await db.runTransactionAsync(async (tx) => {
+        try {
+          const [rowCount] = await tx.runUpdate({
+            sql: sql,
+            params: params,
+          })
+          await tx.commit()
+          count = rowCount
+        } catch (err) {
+          await tx.rollback()
+          throw err
+        }
+      })
     }
+    this.logger.log('update row count:' + count)
     return count
   }
 

@@ -1,13 +1,14 @@
-import { SpannerService } from '../../../lib'
 import { CompositeKeyTestRepository } from '../../src/CompositeKeyTestRepository'
 import { CompositeKeyTest } from '../../src/entity/CompositeKeyTest'
+import { TransactionManager } from '../../../lib'
 
-jest.mock('../../../lib/service/spanner.service')
-const SpannerServiceMock = SpannerService as jest.Mock
+jest.mock('../../../lib/service/transaction-manager')
+
+const TransactionManagerMock = TransactionManager as jest.Mock
 
 describe('repository update test', () => {
   test('update composite key test', async () => {
-    SpannerServiceMock.mockImplementationOnce(() => {
+    TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
           return {
@@ -35,9 +36,9 @@ describe('repository update test', () => {
         },
       }
     })
-    let spannerService = new SpannerService()
+    let transactionManager = new TransactionManager(null)
     let target = new CompositeKeyTestRepository(
-      spannerService,
+      transactionManager,
       CompositeKeyTest,
     )
 
@@ -51,8 +52,11 @@ describe('repository update test', () => {
     expect(actual).toBe(1)
 
     // pk columns check error test
-    spannerService = new SpannerService()
-    target = new CompositeKeyTestRepository(spannerService, CompositeKeyTest)
+    transactionManager = new TransactionManager(null)
+    target = new CompositeKeyTestRepository(
+      transactionManager,
+      CompositeKeyTest,
+    )
     param = new CompositeKeyTest()
     param.id = 123
     param.idSub = ''

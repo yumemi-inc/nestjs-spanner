@@ -1,14 +1,14 @@
 import { TestRepository } from '../../src/TestRepository'
 import { Test } from '../../src/entity/Test'
-import { SpannerService } from '../../../lib'
+import { TransactionManager } from '../../../lib'
 
-jest.mock('../../../lib/service/spanner.service')
+jest.mock('../../../lib/service/transaction-manager')
 
-const SpannerServiceMock = SpannerService as jest.Mock
+const TransactionManagerMock = TransactionManager as jest.Mock
 
 describe('repository basic test', () => {
   test('findAll test', async () => {
-    SpannerServiceMock.mockImplementationOnce(() => {
+    TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
           return {
@@ -40,8 +40,8 @@ describe('repository basic test', () => {
       }
     })
 
-    let spannerService = new SpannerService()
-    let target = new TestRepository(spannerService, Test)
+    let transactionManager = new TransactionManager(null)
+    let target = new TestRepository(transactionManager, Test)
     let actual: Test[] = await target.findAll()
     expect(actual.length).toBe(1)
     const expectResult = new Test()
@@ -50,13 +50,13 @@ describe('repository basic test', () => {
     expectResult.b = 'efg'
     expect(actual[0]).toEqual(expectResult)
 
-    spannerService = new SpannerService()
-    target = new TestRepository(spannerService, Test)
+    transactionManager = new TransactionManager(null)
+    target = new TestRepository(transactionManager, Test)
     await expect(target.findAll()).rejects.toThrow('expected error')
   })
 
   test('findOne test', async () => {
-    SpannerServiceMock.mockImplementationOnce(() => {
+    TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
           return {
@@ -106,8 +106,8 @@ describe('repository basic test', () => {
       }
     })
 
-    let spannerService = new SpannerService()
-    let target = new TestRepository(spannerService, Test)
+    let transactionManager = new TransactionManager(null)
+    let target = new TestRepository(transactionManager, Test)
     let actual: Test | null = await target.findOne({
       where: {
         id: 123,
@@ -119,8 +119,8 @@ describe('repository basic test', () => {
     expectResult.b = 'efg'
     expect(actual).toEqual(expectResult)
 
-    spannerService = new SpannerService()
-    target = new TestRepository(spannerService, Test)
+    transactionManager = new TransactionManager(null)
+    target = new TestRepository(transactionManager, Test)
     await expect(target.findOne({ where: { id: 123 } })).rejects.toThrow(
       'expected error',
     )
