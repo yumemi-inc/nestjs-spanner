@@ -1,4 +1,3 @@
-import { SpannerService } from '../service'
 import { FindOneOptions } from './find-option'
 import { getMetadataArgsStorage } from './globals'
 import { ColumnMetaDataArgs, TableMetaDataArgs } from './meta-data'
@@ -6,8 +5,9 @@ import { Row } from '@google-cloud/spanner/build/src/partial-result-stream'
 import { Logger } from '@nestjs/common'
 import { Database } from '@google-cloud/spanner/build/src/database'
 import { Json } from '@google-cloud/spanner/build/src/codec'
-import { TransactionManager } from '../service/transaction-manager'
+import { TransactionManager } from '../service/'
 import { Transaction } from '@google-cloud/spanner'
+import { FindByPKOptions } from './find-option/find-by-pk-option'
 
 type Meta = {
   metaTable: TableMetaDataArgs
@@ -107,6 +107,40 @@ export class Repository<T> {
   }
 
   async findOne(options: FindOneOptions<T>): Promise<T | null> {
+    const columnNames = this.getColumnNames()
+    const params = {}
+    let sql = this.baseSelectQuery(columnNames, this.getMetaData())
+    sql = sql.concat(' WHERE ')
+
+    const wheres: string[] = Object.keys(options.where).map((key: string) => {
+      params[key] = options.where[key]
+      return key + '=@' + key
+    })
+    sql = sql.concat(wheres.join(' AND ')).concat(' LIMIT 1')
+    // TODO order clause
+    this.logger.log(sql)
+    this.logger.log(JSON.stringify(params))
+
+    try {
+      const [rows] = await this.transactionManager.getDb().run({
+        json: false,
+        sql: sql,
+        params: params,
+      })
+      const entities: T[] = rows.map<T>((row: Row | Json) => {
+        return this.mapEntity(row.toJSON(), columnNames)
+      })
+      if (entities.length > 0) {
+        return entities[0]
+      } else {
+        return null
+      }
+    } catch (err) {
+      throw err
+    }
+  }
+
+  async findByPK(options: FindByPKOptions<T>): Promise<T | null> {
     const meta: Meta = this.getMetaData()
     const columnNames = this.getColumnNames()
     const params = {}
