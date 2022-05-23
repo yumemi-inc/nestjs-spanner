@@ -1,6 +1,6 @@
 {
   "name": "nestjs-spanner",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Cloud Spanner orm for Nest.js",
   "author": "tfunato",
   "private": false,
