@@ -6,8 +6,8 @@ jest.mock('../../../lib/service/transaction-manager')
 
 const TransactionManagerMock = TransactionManager as jest.Mock
 
-describe('repository composite key test', () => {
-  test('findOne composite key test', async () => {
+describe('repository findMany test', () => {
+  test('simple findMany test no order by', async () => {
     TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
@@ -18,7 +18,7 @@ describe('repository composite key test', () => {
               params: { id: number }
             }) => {
               expect(query.sql).toBe(
-                'SELECT id, idSub, a, b FROM CompositeKeyTests WHERE id=@id AND idSub=@idSub LIMIT 1',
+                'SELECT id, idSub, a, b FROM CompositeKeyTests WHERE id=@id AND idSub=@idSub',
               )
               expect(query.json).toBe(false)
               expect(query.params).toEqual({ id: 123, idSub: 'foo' })
@@ -46,7 +46,7 @@ describe('repository composite key test', () => {
       transactionManager,
       CompositeKeyTest,
     )
-    let actual: CompositeKeyTest | null = await target.findOne({
+    let actual: CompositeKeyTest[] = await target.findMany({
       where: {
         id: 123,
         idSub: 'foo',
@@ -56,10 +56,10 @@ describe('repository composite key test', () => {
     expectResult.id = 123
     expectResult.a = 'abcd'
     expectResult.b = 'efg'
-    expect(actual).toEqual(expectResult)
+    expect(actual).toEqual([expectResult])
   })
 
-  test('findOne simple key test', async () => {
+  test('findMany with order by test', async () => {
     TransactionManagerMock.mockImplementationOnce(() => {
       return {
         getDb: (): any => {
@@ -70,7 +70,7 @@ describe('repository composite key test', () => {
               params: { id: number }
             }) => {
               expect(query.sql).toBe(
-                'SELECT id, idSub, a, b FROM CompositeKeyTests WHERE id=@id LIMIT 1',
+                'SELECT id, idSub, a, b FROM CompositeKeyTests WHERE id=@id ORDER BY b asc, a DESC, idSub ASC',
               )
               expect(query.json).toBe(false)
               expect(query.params).toEqual({ id: 123 })
@@ -98,15 +98,20 @@ describe('repository composite key test', () => {
       transactionManager,
       CompositeKeyTest,
     )
-    let actual: CompositeKeyTest | null = await target.findOne({
+    let actual: CompositeKeyTest[] = await target.findMany({
       where: {
         id: 123,
+      },
+      order: {
+        b: 'asc',
+        a: 'DESC',
+        idSub: 'ASC',
       },
     })
     const expectResult = new CompositeKeyTest()
     expectResult.id = 123
     expectResult.a = 'abcd'
     expectResult.b = 'efg'
-    expect(actual).toEqual(expectResult)
+    expect(actual).toEqual([expectResult])
   })
 })
