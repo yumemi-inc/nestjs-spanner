@@ -1,4 +1,8 @@
-import { FindOneOptions } from './find-option'
+import {
+  FindOneOptions,
+  FindOptionsOrder,
+  FindOptionsWhere,
+} from './find-option'
 import { getMetadataArgsStorage } from './globals'
 import { ColumnMetaDataArgs, TableMetaDataArgs } from './meta-data'
 import { Row } from '@google-cloud/spanner/build/src/partial-result-stream'
@@ -8,6 +12,7 @@ import { Json } from '@google-cloud/spanner/build/src/codec'
 import { TransactionManager } from '../service/'
 import { Transaction } from '@google-cloud/spanner'
 import { FindByPKOptions } from './find-option/find-by-pk-option'
+import { FindManyOption } from './find-option/find-many-option'
 
 type Meta = {
   metaTable: TableMetaDataArgs
@@ -108,16 +113,10 @@ export class Repository<T> {
 
   async findOne(options: FindOneOptions<T>): Promise<T | null> {
     const columnNames = this.getColumnNames()
-    const params = {}
     let sql = this.baseSelectQuery(columnNames, this.getMetaData())
-    sql = sql.concat(' WHERE ')
-
-    const wheres: string[] = Object.keys(options.where).map((key: string) => {
-      params[key] = options.where[key]
-      return key + '=@' + key
-    })
-    sql = sql.concat(wheres.join(' AND ')).concat(' LIMIT 1')
-    // TODO order clause
+    const [whereClause, params] = this.getWhereClause(options.where)
+    sql = sql.concat(whereClause)
+    sql = sql.concat(this.getOrderByClause(options.order)).concat(' LIMIT 1')
     this.logger.log(sql)
     this.logger.log(JSON.stringify(params))
 
@@ -170,6 +169,30 @@ export class Repository<T> {
       } else {
         return null
       }
+    } catch (err) {
+      throw err
+    }
+  }
+
+  async findMany(options: FindManyOption<T>): Promise<T[]> {
+    const columnNames = this.getColumnNames()
+    let sql = this.baseSelectQuery(columnNames, this.getMetaData())
+    const [whereClause, params] = this.getWhereClause(options.where)
+    sql = sql.concat(whereClause)
+    sql = sql.concat(this.getOrderByClause(options.order))
+    this.logger.log(sql)
+    this.logger.log(JSON.stringify(params))
+
+    try {
+      const [rows] = await this.transactionManager.getDb().run({
+        json: false,
+        sql: sql,
+        params: params,
+      })
+      const entities: T[] = rows.map<T>((row: Row | Json) => {
+        return this.mapEntity(row.toJSON(), columnNames)
+      })
+      return entities
     } catch (err) {
       throw err
     }
@@ -346,5 +369,30 @@ export class Repository<T> {
       }
     })
     return pkColumns
+  }
+
+  protected getOrderByClause(order: FindOptionsOrder<T>): string {
+    if (!order) {
+      return ''
+    }
+    return ' ORDER BY '.concat(
+      Object.keys(order)
+        .map((key: string) => {
+          return key.concat(' ').concat(order[key])
+        })
+        .join(', '),
+    )
+  }
+
+  protected getWhereClause(
+    where: FindOptionsWhere<T>,
+  ): [string, FindOptionsWhere<T>] {
+    const params = {}
+    const clause = ' WHERE '
+    const wheres: string[] = Object.keys(where).map((key: string) => {
+      params[key] = where[key]
+      return key + '=@' + key
+    })
+    return [clause.concat(wheres.join(' AND ')), params]
   }
 }
